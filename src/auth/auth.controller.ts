@@ -2,7 +2,6 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Request, UseGuards, 
 import { RegisterDto } from './dto/register.dto';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
-import { AuthGuard } from '@nestjs/passport';
 import { RoleEnum } from 'src/common/enum/role.enum';
 import { Roles } from './decorators/roles.decorator';
 import { RolesGuard } from './guards/roles.guard';

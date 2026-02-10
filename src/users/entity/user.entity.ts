@@ -1,5 +1,6 @@
-import { BeforeInsert, Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { RoleEnum } from "../../common/enum/role.enum";
+import { Product } from "src/product/entity/product.entity";
 
 @Entity('users')
 export class User{
@@ -15,7 +16,7 @@ export class User{
     @Column()
     password!: string;
     
-    @Column({type: 'enum', enum: RoleEnum, nullable : true, default: RoleEnum.CUSTOMER})  
+    @Column({type: 'enum', enum: RoleEnum, nullable : false, default: RoleEnum.CUSTOMER})  
     role!: RoleEnum;
         
     @Column({default : false})
@@ -46,6 +47,8 @@ export class User{
         this.otp_expires_at = new Date(now.getTime() + 5 * 60 * 1000);
     }
     
+    @OneToMany(()=> Product, (product)=> product.owner)
+    products! : Product[];
 
 
 }
