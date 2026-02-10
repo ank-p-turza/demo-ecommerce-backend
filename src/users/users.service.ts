@@ -2,7 +2,7 @@ import { ConflictException, Injectable, InternalServerErrorException } from '@ne
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entity/user.entity';
 import { Repository } from 'typeorm';
-import { CreateUserDto } from './dto/create-user.dto';
+import { UserDto } from './dto/user.dto';
 import { RoleEnum } from '../common/enum/role.enum';
 import * as bcrypt from 'bcrypt';
 
@@ -19,7 +19,7 @@ export class UsersService {
         return otp;
     }
 
-    async createUser(createUserDto: CreateUserDto) : Promise<{message : string}>{
+    async createUser(createUserDto: UserDto) : Promise<{message : string}>{
         const otp : string = this.generatOTP(8);
         const {name, email, password, role=RoleEnum.CUSTOMER} = createUserDto;
         const rounds : number = 5;
@@ -48,6 +48,16 @@ export class UsersService {
         
     }
 
+    async getUserbyEmail(email : string) : Promise<UserDto | null> {
+        const user = await this.userRepo.findOne({
+            where : {email},
+        });
+        if(!user){
+           return null;
+        }
+        const UserDto: UserDto = user;
+        return UserDto;
+    }
 
 
 }
