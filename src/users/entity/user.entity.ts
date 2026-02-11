@@ -1,6 +1,7 @@
-import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { RoleEnum } from "../../common/enum/role.enum";
 import { Product } from "src/product/entity/product.entity";
+import { Cart } from "src/cart/entity/cart.entity";
 
 @Entity('users')
 export class User{
@@ -49,6 +50,9 @@ export class User{
     
     @OneToMany(()=> Product, (product)=> product.owner)
     products! : Product[];
+
+    @OneToOne(()=>Cart, (cart)=>cart.user)
+    cart !: Cart;
 
 
 }

@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ProductModule } from './product/product.module';
+import { CartModule } from './cart/cart.module';
 
 @Module({
   imports: [
@@ -24,7 +25,8 @@ import { ProductModule } from './product/product.module';
       //for dev sync is being set true
       synchronize : true,
     }),
-    ProductModule
+    ProductModule,
+    CartModule
 
   ],
   controllers: [AppController],
