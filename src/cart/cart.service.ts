@@ -53,7 +53,15 @@ export class CartService {
             where : {id : cart.id},
             relations : ['item', 'item.product']
         });
+    }
 
+    async getUserCart(userId : number){
+        const cart = await this.cartRepo.find({
+            where : {user : {id : userId}},
+            relations : ['item' , 'item.product']
+        });
+        if(!cart) throw new NotFoundException("Noting found in the cart");
+        return cart;
     }
 
     
