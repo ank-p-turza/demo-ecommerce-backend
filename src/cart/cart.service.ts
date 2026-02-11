@@ -3,14 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from './entity/cart.entity';
 import { CartItem } from './entity/cart-item.entity';
-import { Product } from 'src/product/entity/product.entity';
 import { AddproductToCartDto } from './dto/add-product-to-cart.dto';
+import { ProductService } from 'src/product/product.service';
 
 @Injectable()
 export class CartService {
     constructor(@InjectRepository(Cart) private readonly cartRepo : Repository<Cart>,
                 @InjectRepository(CartItem) private readonly cartItemRepo : Repository<CartItem>,
-                @InjectRepository(Product) private readonly productRepo : Repository<Product>){}
+                private readonly productService : ProductService){}
 
     async addItem(userId : number, addProductToCartDto : AddproductToCartDto){
         const {productId, quantity} = addProductToCartDto;
@@ -28,7 +28,7 @@ export class CartService {
             await this.cartRepo.save(cart);
         }
 
-        const product = await this.productRepo.findOne({where : {id : productId}})
+        const product = await this.productService.getProductById(productId);
         if(!product){
             throw new NotFoundException('Product nor found.');
         }
