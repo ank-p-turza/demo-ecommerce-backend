@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from './entity/cart.entity';
@@ -45,7 +45,8 @@ export class CartService {
 
         const cartItem = this.cartItemRepo.create({
             cart : {id : cart.id},
-            product : {id : productId}
+            product : {id : productId},
+            quantity : quantity
         });
          
         await this.cartItemRepo.save(cartItem);
@@ -56,13 +57,72 @@ export class CartService {
     }
 
     async getUserCart(userId : number){
-        const cart = await this.cartRepo.find({
+        const cart = await this.cartRepo.findOne({
             where : {user : {id : userId}},
             relations : ['item' , 'item.product']
         });
-        if(!cart) throw new NotFoundException("Noting found in the cart");
+        if(!cart) throw new NotFoundException("Nothing found in the cart");
         return cart;
     }
 
-    
+
+    async getCartItemByItemId(userId : number, cartItemId : number){
+        const cartItem = await this.cartItemRepo.findOne({
+            where : {id : cartItemId},
+            relations : ['cart', 'cart.user', 'product']
+        });
+
+        if(!cartItem){
+            throw new NotFoundException('Cart item not found.');
+        }
+        if(cartItem.cart.user.id !== userId){
+            throw new UnauthorizedException("This item does not belong to your cart.");
+        }
+        return cartItem;
+    }
+
+    async updateCartItemQuantity(userId : number, cartItemId : number, quantity : number){
+        if(quantity < 0){
+            throw new BadRequestException('Quantity must be >= 0');
+        }
+
+        const cartItem = await this.getCartItemByItemId(userId, cartItemId);
+
+        if(quantity === 0){
+            return await this.removeItemFromCart(userId, cartItemId);
+        }
+
+        const product = await this.productService.getProductById(cartItem.product.id);
+        if(product.quantity < quantity){
+            throw new BadRequestException('Insufficient product quantity.');
+        }
+
+        cartItem.quantity = quantity;
+        await this.cartItemRepo.save(cartItem);
+
+        return this.getUserCart(userId);
+    }
+
+    async removeItemFromCart(userId : number, cartItemId : number){
+        await this.getCartItemByItemId(userId, cartItemId);
+        await this.cartItemRepo.delete(cartItemId);
+        return this.getUserCart(userId);
+    }
+
+    async clearCart(userId : number){
+        const cart = await this.cartRepo.findOne({
+            where : {user : {id : userId}},
+            relations : ['item']
+        });
+
+        if(!cart){
+            throw new NotFoundException('Cart not found.');
+        }
+
+        if(cart.item && cart.item.length > 0){
+            await this.cartItemRepo.delete(cart.item.map(item => item.id));
+        }
+
+        return {message : 'Cart cleared successfully'};
+    }
 }
