@@ -7,10 +7,15 @@ import { PassportModule } from '@nestjs/passport';
 import {JwtModule} from '@nestjs/jwt';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { EmailapiModule } from 'src/common/emailapi/emailapi.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from 'src/users/entity/user.entity';
 
 @Module({
   imports: [
-    UsersModule, 
+    UsersModule,
+    EmailapiModule,
+    TypeOrmModule.forFeature([User]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

@@ -5,10 +5,13 @@ import { Repository } from 'typeorm';
 import { UserDto } from './dto/user.dto';
 import { RoleEnum } from '../common/enum/role.enum';
 import * as bcrypt from 'bcrypt';
+import { SendEmailDto } from 'src/common/emailapi/dto/send-email.dto';
+import { EmailapiService } from 'src/common/emailapi/emailapi.service';
 
 @Injectable()
 export class UsersService {
-    constructor(@InjectRepository(User) private readonly userRepo : Repository<User>){}
+    constructor(@InjectRepository(User) private readonly userRepo : Repository<User>,
+                private readonly emailapiService : EmailapiService){}
 
     generatOTP(length : number) : string {
         let otp = '';
@@ -22,6 +25,9 @@ export class UsersService {
     async createUser(createUserDto: UserDto) : Promise<{message : string}>{
         const otp : string = this.generatOTP(8);
         const {name, email, password, role=RoleEnum.CUSTOMER} = createUserDto;
+        const message = `Hello, ${name}, \nWelcome to demo ecommerce. Your One Time Password (OTP) is : ${otp}. Do not share this code with anyone.`;
+        const sendEmailDto : SendEmailDto = {name, to_email: email, subject : "Demo Ecommerce email verification.", message};
+        this.emailapiService.sendMail(sendEmailDto);
         const rounds : number = 5;
         const hashedPassword :string = await bcrypt.hash(password, rounds);
         try{

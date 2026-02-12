@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ProductModule } from './product/product.module';
 import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
+import { EmailapiModule } from './common/emailapi/emailapi.module';
 
 @Module({
   imports: [
@@ -28,8 +29,8 @@ import { OrderModule } from './order/order.module';
     }),
     ProductModule,
     CartModule,
-    OrderModule
-
+    OrderModule,
+    EmailapiModule
   ],
   controllers: [AppController],
   providers: [AppService],
