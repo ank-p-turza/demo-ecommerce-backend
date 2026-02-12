@@ -1,98 +1,445 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Demo E-Commerce Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A full-featured e-commerce backend API built with NestJS, TypeScript, and PostgreSQL (TypeORM). This application provides comprehensive functionality for user authentication, product management, shopping cart operations, and order processing with email notifications.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 📋 Table of Contents
 
-## Description
+- [Tech Stack](#tech-stack)
+- [Features](#features)
+- [Setup Instructions](#setup-instructions)
+- [Database Schema](#database-schema)
+- [API Endpoints](#api-endpoints)
+- [Key Architectural Decisions](#key-architectural-decisions)
+- [Assumptions Made](#assumptions-made)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 🛠 Tech Stack
 
-## Project setup
+### Core Framework & Language
+- **NestJS** (v11.0.1) - Progressive Node.js framework
+- **TypeScript** - Type-safe development
+- **Node.js** - Runtime environment
 
+### Database & ORM
+- **PostgreSQL** - Relational database
+- **TypeORM** (v0.3.28) - Object-Relational Mapping
+- **Decimal.js** - Precise decimal calculations for prices
+
+### Authentication & Security
+- **Passport** - Authentication middleware
+- **Passport-JWT** - JWT authentication strategy
+- **Passport-Local** - Local authentication strategy
+- **bcrypt** (v6.0.0) - Password hashing
+
+### Validation & Data Handling
+- **class-validator** (v0.14.3) - DTO validation
+- **class-transformer** (v0.5.1) - Object transformation
+
+### External Communication
+- **Axios** (v1.13.5) - HTTP client for API requests
+- **@nestjs/axios** (v4.0.1) - NestJS Axios integration
+
+### Development Tools
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
+- **Jest** - Testing framework
+
+## ✨ Features
+
+### User Management
+- User registration with email verification (OTP-based)
+- Role-based access control (Admin/Customer)
+- JWT-based authentication
+- Password hashing with bcrypt
+- Email OTP with 5-minute expiry
+- Resend OTP functionality
+
+### Product Management (Admin Only)
+- Create, read, update, and delete products
+- Product inventory tracking
+- Admin ownership of products
+
+### Shopping Cart
+- Add/remove products from cart
+- Update item quantities
+- View cart contents
+- Clear entire cart
+- Automatic cart creation per user
+
+### Order Management
+- Create orders from cart items
+- Stock validation and pessimistic locking
+- Transactional order processing
+- Order status tracking (8 states)
+- Order cancellation with stock restoration
+- Email notifications for order confirmation/cancellation
+- View order history
+- Admin order status updates
+
+### Email Notifications
+- Order confirmation emails
+- Order cancellation emails
+- Email verification OTP
+- OTP resend emails
+
+## 🚀 Setup Instructions
+
+### Prerequisites
+- Node.js (v16 or higher)
+- PostgreSQL (v12 or higher)
+- npm or yarn
+- Email API service (for email functionality)
+
+### Installation Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/ank-p-turza/demo-ecommerce-backend.git
+   cd demo-ecommerce-backend
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure environment variables**
+   
+   Create a `.env` file in the root directory based on `example.env`:
+   ```env
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_USERNAME=postgres
+   DB_PASSWORD=your_password
+   DB_NAME=demo_ecom
+   JWT_SECRET_KEY=your_jwt_secret_key
+   EMAIL_API_URL=your_email_api_url
+   ```
+
+4. **Set up PostgreSQL database**
+   ```bash
+   # Create database
+   createdb demo_ecom
+   ```
+   
+   The application will automatically create tables using TypeORM's `synchronize: true` option (development only).
+
+5. **Run the application**
+   ```bash
+   # Development mode with hot reload
+   npm run start:dev
+
+   # Production mode
+   npm run build
+   npm run start:prod
+   ```
+
+6. **Access the API**
+   
+   The API will be available at: `http://localhost:3000`
+
+### Available Scripts
+
+#### Installation
 ```bash
-$ npm install
+# Install all dependencies
+npm install
 ```
 
-## Compile and run the project
-
+#### Build
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+# Build the project for production
+npm run build
 ```
 
-## Run tests
-
+#### Run Application
 ```bash
-# unit tests
-$ npm run test
+# Start application in development mode with hot reload
+npm run start:dev
 
-# e2e tests
-$ npm run test:e2e
+# Start application in regular mode
+npm run start
 
-# test coverage
-$ npm run test:cov
+# Start application in production mode (requires build first)
+npm run start:prod
+
+# Start application in debug mode
+npm run start:debug
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
+#### Testing
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Run unit tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run E2E tests
+npm run test:e2e
+
+# Generate test coverage report
+npm run test:cov
+
+# Run tests in debug mode
+npm run test:debug
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+#### Code Quality
+```bash
+# Format code with Prettier
+npm run format
 
-## Resources
+# Lint code with ESLint
+npm run lint
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## 🗄 Database Schema
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Entity Relationship Diagram
 
-## Support
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+    users {
+        int id PK
+        varchar name
+        varchar email UK
+        varchar password
+        enum role
+        boolean is_verified
+        varchar otp
+        timestamptz otp_expires_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
 
-## Stay in touch
+    products {
+        int id PK
+        text name
+        text description
+        numeric price
+        int quantity
+        int owner_id FK
+    }
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+    carts {
+        int id PK
+        int user_id FK
+    }
 
-## License
+    cartitems {
+        int id PK
+        int cart_id FK
+        int product_id FK
+        int quantity
+    }
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+    orders {
+        int id PK
+        int user_id FK
+        decimal totalAmount
+        enum status
+        text shippingAddress
+        text notes
+        timestamp createdAt
+        timestamp updatedAt
+    }
+
+    orderitems {
+        int id PK
+        int order_id FK
+        int product_id FK
+        int quantity
+        decimal priceAtPurchase
+        decimal subtotal
+    }
+```
+
+### Database Tables
+
+#### users
+- Stores user account information
+- Supports role-based access (ADMIN/CUSTOMER)
+- Email verification with OTP (5-minute expiry)
+- Password hashed with bcrypt
+
+#### products
+- Product catalog managed by admins
+- Tracks inventory quantity
+- Linked to admin owner
+
+#### carts & cartitems
+- One cart per user (1:1 relationship)
+- Cart items reference products
+- Supports quantity adjustments
+
+#### orders & orderitems
+- Immutable order records
+- Captures price at purchase time
+- 8 order statuses: PENDING, PAYMENT_PENDING, PAID, PROCESSING, SHIPPED, DELIVERED, CANCELLED, REFUNDED
+- Automatic stock management
+
+### Enums
+
+**RoleEnum**: `ADMIN`, `CUSTOMER`
+
+**OrderStatus**: `PENDING`, `PAYMENT_PENDING`, `PAID`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`, `REFUNDED`
+
+## 📡 API Endpoints
+
+### Authentication (`/auth`)
+- `POST /auth/signup` - Register new user (sends OTP email)
+- `POST /auth/signin` - Login user (returns JWT token)
+- `POST /auth/verify-email` - Verify email with OTP
+- `POST /auth/resend-otp` - Resend OTP email
+- `GET /auth/test` - Test endpoint (Admin only)
+
+### Products (`/products`)
+- `GET /products` - Get all products (public)
+- `GET /products/:id` - Get product by ID (public)
+- `POST /products` - Create product (Admin only, requires JWT)
+- `PATCH /products/:id` - Update product (Admin only, requires JWT)
+- `DELETE /products/:id` - Delete product (Admin only, requires JWT)
+
+### Cart (`/cart`)
+- `GET /cart` - Get user cart (requires JWT)
+- `POST /cart/items` - Add item to cart (requires JWT)
+- `PATCH /cart/items/:cartItemId` - Update item quantity (requires JWT)
+- `DELETE /cart/items/:cartItemId` - Remove item from cart (requires JWT)
+- `DELETE /cart` - Clear entire cart (requires JWT)
+
+### Orders (`/orders`)
+- `POST /orders` - Create order (requires JWT, sends email)
+- `GET /orders` - Get user order history (requires JWT)
+- `GET /orders/:orderId` - Get specific order (requires JWT)
+- `PATCH /orders/:orderId/cancel` - Cancel order (requires JWT, sends email)
+- `PATCH /orders/:orderId/status` - Update order status (Admin only, requires JWT)
+
+### Authentication Headers
+```
+Authorization: Bearer <jwt_token>
+```
+
+## 🏗 Key Architectural Decisions
+
+### 1. **Module-Based Architecture**
+   - Separated concerns into distinct modules (Auth, Users, Products, Cart, Orders)
+   - Each module is self-contained with its own controllers, services, entities, and DTOs
+   - Promotes maintainability and scalability
+
+### 2. **Repository Pattern with TypeORM**
+   - Used TypeORM repositories for database operations
+   - Provides abstraction over database layer
+   - Enables easy testing and database switching
+
+### 3. **JWT-Based Authentication**
+   - Stateless authentication using JWT tokens
+   - Tokens expire after 1 hour (3600 seconds)
+   - Passport strategies for local and JWT authentication
+
+### 4. **Role-Based Access Control (RBAC)**
+   - Custom decorators (`@Roles`) for route protection
+   - Guards (`JwtAuthGuard`, `RolesGuard`) for authorization
+   - Two roles: ADMIN (product management) and CUSTOMER (shopping)
+
+### 5. **Transaction Management**
+   - Used QueryRunner for complex operations (orders, cancellations)
+   - Pessimistic locking prevents race conditions on inventory
+   - Ensures data consistency with automatic rollback on errors
+
+### 6. **Email Verification with OTP**
+   - 8-character alphanumeric OTP
+   - 5-minute expiry (set in BeforeInsert hook)
+   - Non-blocking: email failures don't prevent order creation
+
+### 7. **Decimal Precision for Money**
+   - Used `Decimal.js` for accurate financial calculations
+   - Prevents floating-point arithmetic errors
+   - Stored as `decimal(10,2)` in database
+
+### 8. **DTOs with Validation**
+   - class-validator for automatic request validation
+   - ValidationPipe for DTO transformation
+   - Type-safe request/response handling
+
+### 9. **Separation of Concerns**
+   - Business logic in services
+   - HTTP handling in controllers
+   - Data access in repositories
+   - Authentication logic in Auth module (not Users)
+
+### 10. **Email Service Integration**
+   - Abstracted email sending to EmailApi service
+   - Supports external email API
+   - Error handling doesn't block main operations
+
+## 📝 Assumptions Made
+
+### 1. **Business Logic Assumptions**
+   - Each user can have only one cart
+   - Admin users can only manage their own products
+   - Price is captured at purchase time (orderitems.priceAtPurchase)
+   - Orders can only be cancelled in PENDING or PAYMENT_PENDING status
+   - Stock is automatically deducted on order creation and restored on cancellation
+
+### 2. **Security Assumptions**
+   - Passwords must contain: uppercase, lowercase, digit, symbol, min 8 characters
+   - JWT secret is strong and kept secure
+   - HTTPS is used in production
+   - Database credentials are properly secured
+
+### 3. **Email System Assumptions**
+   - External email API service is available and configured
+   - Email delivery is asynchronous and may fail without affecting operations
+   - Users have valid email addresses
+   - OTP emails are delivered within 5 minutes
+
+### 4. **Database Assumptions**
+   - PostgreSQL is properly configured and accessible
+   - `synchronize: true` is only used in development (manual migrations in production)
+   - Database has sufficient storage and performance
+   - Proper indexes exist for frequently queried fields
+
+### 5. **User Flow Assumptions**
+   - Users must verify email before full access (though not enforced in current implementation)
+   - Users are logged in via JWT for protected routes
+   - Admin role is assigned during registration (not through promotion)
+
+### 6. **Inventory Management Assumptions**
+   - Negative inventory is prevented
+   - Stock checks happen at order creation, not cart addition
+   - Concurrent order processing is handled via pessimistic locks
+   - No reservation system for cart items
+
+### 7. **Order Management Assumptions**
+   - Orders are immutable once created (status can change, but items cannot)
+   - Total amount includes all items, no taxes or shipping fees
+   - Shipping address is stored as plain text
+   - Order history is kept indefinitely
+
+### 8. **Error Handling Assumptions**
+   - Email failures are logged but don't throw errors
+   - Database errors trigger transaction rollback
+   - All user-facing errors provide meaningful messages
+
+### 9. **Performance Assumptions**
+   - Application handles moderate concurrent load
+   - Database connection pooling is managed by TypeORM
+   - No caching layer implemented (relies on database performance)
+
+### 10. **Development vs Production**
+   - `synchronize: true` should be disabled in production
+   - Environment variables are securely managed
+   - Logging is more verbose in development
+   - Error stack traces are hidden in production
+
+## 📄 License
+
+This project is licensed under UNLICENSED.
+
+## 👤 Author
+
+**Anka Paul Turza**
+
+---
+
+For questions and support, please open an issue in the repository.
