@@ -1,6 +1,7 @@
 import { CartItem } from "src/cart/entity/cart-item.entity";
+import { OrderItem } from "src/order/entity/order-item.entity";
 import { User } from "src/users/entity/user.entity";
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('products')
 export class Product{
@@ -30,7 +31,10 @@ export class Product{
     @Column({name : "owner_id"})
     owner_id! : number;
 
-    @ManyToOne(()=> CartItem, (item)=> item.product)
+    @OneToMany(()=> CartItem, (item)=> item.product)
     cartItems! : CartItem[];
+
+    @OneToMany(()=> OrderItem, (item)=> item.product)
+    orderItems!: OrderItem[];
 
 }

@@ -2,6 +2,7 @@ import { BeforeInsert, Column, CreateDateColumn, Entity, OneToMany, OneToOne, Pr
 import { RoleEnum } from "../../common/enum/role.enum";
 import { Product } from "src/product/entity/product.entity";
 import { Cart } from "src/cart/entity/cart.entity";
+import { Order } from "src/order/entity/order.entity";
 
 @Entity('users')
 export class User{
@@ -54,5 +55,7 @@ export class User{
     @OneToOne(()=>Cart, (cart)=>cart.user)
     cart !: Cart;
 
+    @OneToMany(()=> Order, (order)=> order.user)
+    orders!: Order[];
 
 }
