@@ -9,6 +9,7 @@ import { ProductModule } from './product/product.module';
 import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { EmailapiModule } from './common/emailapi/emailapi.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { EmailapiModule } from './common/emailapi/emailapi.module';
     ProductModule,
     CartModule,
     OrderModule,
-    EmailapiModule
+    EmailapiModule,
+    PaymentModule
   ],
   controllers: [AppController],
   providers: [AppService],

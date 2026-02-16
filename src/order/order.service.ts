@@ -10,6 +10,7 @@ import Decimal from 'decimal.js';
 import { EmailapiService } from 'src/common/emailapi/emailapi.service';
 import { SendEmailDto } from 'src/common/emailapi/dto/send-email.dto';
 import { User } from 'src/users/entity/user.entity';
+import { PaymentService } from 'src/payment/payment.service';
 
 @Injectable()
 export class OrderService {
@@ -19,7 +20,8 @@ export class OrderService {
         @InjectRepository(Product) private readonly productRepo: Repository<Product>,
         @InjectRepository(User) private readonly userRepo: Repository<User>,
         private readonly dataSource: DataSource,
-        private readonly emailapiService: EmailapiService
+        private readonly emailapiService: EmailapiService,
+        private readonly paymentService : PaymentService
     ) {}
 
     async createOrder(userId: number, createOrderDto: CreateOrderDto) {
@@ -29,14 +31,13 @@ export class OrderService {
         await queryRunner.startTransaction();
 
         try {
-            // Validate all products and check stock availability
             const orderItems: {product: Product, quantity: number}[] = [];
             let totalAmount = new Decimal(0);
 
             for (const item of createOrderDto.items) {
                 const product = await queryRunner.manager.findOne(Product, {
                     where: { id: item.productId },
-                    lock: { mode: 'pessimistic_write' } // Lock row to prevent concurrent modifications
+                    lock: { mode: 'pessimistic_write' }
                 });
 
                 if (!product) {
@@ -57,26 +58,26 @@ export class OrderService {
 
                 orderItems.push({ product, quantity: item.quantity });
                 
-                // Calculate subtotal for this item
                 const itemSubtotal = new Decimal(product.price).times(item.quantity);
                 totalAmount = totalAmount.plus(itemSubtotal);
             }
 
+            
             // Create order
             const order = queryRunner.manager.create(Order, {
                 user: { id: userId },
                 totalAmount: totalAmount.toFixed(2),
                 status: OrderStatus.PENDING,
                 shippingAddress: createOrderDto.shippingAddress,
-                notes: createOrderDto.notes
+                notes: createOrderDto.notes,
             });
-
+            
             await queryRunner.manager.save(order);
-
+            
             // Create order items and deduct stock
             for (const { product, quantity } of orderItems) {
                 const subtotal = new Decimal(product.price).times(quantity);
-
+                
                 const orderItem = queryRunner.manager.create(OrderItem, {
                     order: { id: order.id },
                     product: { id: product.id },
@@ -84,17 +85,21 @@ export class OrderService {
                     priceAtPurchase: product.price,
                     subtotal: subtotal.toFixed(2)
                 });
-
+                
                 await queryRunner.manager.save(orderItem);
-
+                
                 product.quantity -= quantity;
                 await queryRunner.manager.save(product);
             }
-
+            
             await queryRunner.commitTransaction();
 
+            const orderId = order.id;
+
+            await queryRunner.release();
+
             const completeOrder = await this.orderRepo.findOne({
-                where: { id: order.id },
+                where: { id: orderId },
                 relations: ['items', 'items.product', 'user']
             });
 
@@ -102,14 +107,16 @@ export class OrderService {
                 throw new InternalServerErrorException('Order details can not be shown now.');
             }
 
+            const paymentUrl = await this.paymentService.initiatePayment(completeOrder.user.id, completeOrder.id);
+
             try {
                 const user = await this.userRepo.findOne({ where: { id: userId } });
                 if (user?.email) {
                     const itemsList = completeOrder.items
-                        .map(item => `- ${item.product.name} x ${item.quantity} = $${item.subtotal}`)
+                        .map(item => `- ${item.product.name} x ${item.quantity} =  ৳${item.subtotal}`)
                         .join('\n');
 
-                    const message = `Hello ${user.name},\n\nYour order #${completeOrder.id} has been successfully created!\n\nOrder Details:\n${itemsList}\n\nTotal Amount: $${completeOrder.totalAmount}\nShipping Address: ${completeOrder.shippingAddress}\nStatus: ${completeOrder.status}\n\nThank you for shopping with us!`;
+                    const message = `Hello ${user.name},\n\nYour order #${completeOrder.id} has been successfully created!\n\nOrder Details:\n${itemsList}\n\nTotal Amount:  ৳${completeOrder.totalAmount}\nShipping Address: ${completeOrder.shippingAddress}\nStatus: ${completeOrder.status}\n\nThank you for shopping with us!`;
 
                     const sendEmailDto: SendEmailDto = {
                         name: user.name,
@@ -124,10 +131,15 @@ export class OrderService {
                 console.error('Failed to send order confirmation email:', emailError);
             }
 
-            return completeOrder;
+            const { ...all} = completeOrder;
+            const orderWithPaymentUrl =  {all, paymentUrl};
+
+            return orderWithPaymentUrl;
 
         } catch (error) {
-            await queryRunner.rollbackTransaction();
+            if (queryRunner.isTransactionActive) {
+                await queryRunner.rollbackTransaction();
+            }
             
             if (error instanceof NotFoundException || error instanceof BadRequestException) {
                 throw error;
@@ -136,7 +148,9 @@ export class OrderService {
             console.error('Order creation error:', error);
             throw new InternalServerErrorException('Failed to create order. Please try again.');
         } finally {
-            await queryRunner.release();
+            if (!queryRunner.isReleased) {
+                await queryRunner.release();
+            }
         }
     }
 
@@ -213,15 +227,17 @@ export class OrderService {
             await queryRunner.manager.save(order);
 
             await queryRunner.commitTransaction();
-
+            
+            await queryRunner.release();
+            
             try {
                 const user = await this.userRepo.findOne({ where: { id: userId } });
                 if (user?.email) {
                     const itemsList = order.items
-                        .map(item => `- ${item.product.name} x ${item.quantity} = $${item.subtotal}`)
+                        .map(item => `- ${item.product.name} x ${item.quantity} =  ৳${item.subtotal}`)
                         .join('\n');
 
-                    const message = `Hello ${user.name},\n\nYour order #${order.id} has been cancelled.\n\nOrder Details:\n${itemsList}\n\nTotal Amount: $${order.totalAmount}\n\nThe items have been returned to stock. If you have any questions, please contact our support team.`;
+                    const message = `Hello ${user.name},\n\nYour order #${order.id} has been cancelled.\n\nOrder Details:\n${itemsList}\n\nTotal Amount:  ৳${order.totalAmount}\n\nThe items have been returned to stock. If you have any questions, please contact our support team.`;
 
                     const sendEmailDto: SendEmailDto = {
                         name: user.name,
@@ -239,7 +255,9 @@ export class OrderService {
             return order;
 
         } catch (error) {
-            await queryRunner.rollbackTransaction();
+            if (queryRunner.isTransactionActive) {
+                await queryRunner.rollbackTransaction();
+            }
             
             if (error instanceof NotFoundException || error instanceof BadRequestException) {
                 throw error;
@@ -248,7 +266,9 @@ export class OrderService {
             console.error('Order cancellation error:', error);
             throw new InternalServerErrorException('Failed to cancel order.');
         } finally {
-            await queryRunner.release();
+            if (!queryRunner.isReleased) {
+                await queryRunner.release();
+            }
         }
     }
 }

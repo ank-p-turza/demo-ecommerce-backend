@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, ManyToOne, OneToMany, PrimaryGenerate
 import { User } from "src/users/entity/user.entity";
 import { OrderItem } from "./order-item.entity";
 import { OrderStatus } from "src/common/enum/order-status.enum";
+import { Transaction } from 'src/payment/entity/transaction.entity';
 
 @Entity('orders')
 export class Order {
@@ -29,6 +30,9 @@ export class Order {
 
     @OneToMany(() => OrderItem, (orderItem) => orderItem.order, {cascade: true, eager: true})
     items!: OrderItem[];
+
+    @OneToMany(()=> Transaction, (transaction)=> transaction.order, {cascade : true})
+    transactions!: Transaction[];
 
     @CreateDateColumn()
     createdAt!: Date;
