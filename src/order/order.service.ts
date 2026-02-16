@@ -7,6 +7,9 @@ import { Product } from 'src/product/entity/product.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderStatus } from 'src/common/enum/order-status.enum';
 import Decimal from 'decimal.js';
+import { EmailapiService } from 'src/common/emailapi/emailapi.service';
+import { SendEmailDto } from 'src/common/emailapi/dto/send-email.dto';
+import { User } from 'src/users/entity/user.entity';
 
 @Injectable()
 export class OrderService {
@@ -14,7 +17,9 @@ export class OrderService {
         @InjectRepository(Order) private readonly orderRepo: Repository<Order>,
         @InjectRepository(OrderItem) private readonly orderItemRepo: Repository<OrderItem>,
         @InjectRepository(Product) private readonly productRepo: Repository<Product>,
-        private readonly dataSource: DataSource
+        @InjectRepository(User) private readonly userRepo: Repository<User>,
+        private readonly dataSource: DataSource,
+        private readonly emailapiService: EmailapiService
     ) {}
 
     async createOrder(userId: number, createOrderDto: CreateOrderDto) {
@@ -82,18 +87,44 @@ export class OrderService {
 
                 await queryRunner.manager.save(orderItem);
 
-                // Deduct stock
                 product.quantity -= quantity;
                 await queryRunner.manager.save(product);
             }
 
             await queryRunner.commitTransaction();
 
-            // Fetch and return complete order with relations
-            return await this.orderRepo.findOne({
+            const completeOrder = await this.orderRepo.findOne({
                 where: { id: order.id },
-                relations: ['items', 'items.product']
+                relations: ['items', 'items.product', 'user']
             });
+
+            if (!completeOrder) {
+                throw new InternalServerErrorException('Order details can not be shown now.');
+            }
+
+            try {
+                const user = await this.userRepo.findOne({ where: { id: userId } });
+                if (user?.email) {
+                    const itemsList = completeOrder.items
+                        .map(item => `- ${item.product.name} x ${item.quantity} = $${item.subtotal}`)
+                        .join('\n');
+
+                    const message = `Hello ${user.name},\n\nYour order #${completeOrder.id} has been successfully created!\n\nOrder Details:\n${itemsList}\n\nTotal Amount: $${completeOrder.totalAmount}\nShipping Address: ${completeOrder.shippingAddress}\nStatus: ${completeOrder.status}\n\nThank you for shopping with us!`;
+
+                    const sendEmailDto: SendEmailDto = {
+                        name: user.name,
+                        to_email: user.email,
+                        subject: `Order Confirmation - Order #${completeOrder.id}`,
+                        message
+                    };
+
+                    await this.emailapiService.sendMail(sendEmailDto);
+                }
+            } catch (emailError) {
+                console.error('Failed to send order confirmation email:', emailError);
+            }
+
+            return completeOrder;
 
         } catch (error) {
             await queryRunner.rollbackTransaction();
@@ -165,7 +196,7 @@ export class OrderService {
                 throw new BadRequestException('Only pending orders can be cancelled.');
             }
 
-            // Restore stock for all items
+
             for (const item of order.items) {
                 const product = await queryRunner.manager.findOne(Product, {
                     where: { id: item.product.id },
@@ -182,6 +213,28 @@ export class OrderService {
             await queryRunner.manager.save(order);
 
             await queryRunner.commitTransaction();
+
+            try {
+                const user = await this.userRepo.findOne({ where: { id: userId } });
+                if (user?.email) {
+                    const itemsList = order.items
+                        .map(item => `- ${item.product.name} x ${item.quantity} = $${item.subtotal}`)
+                        .join('\n');
+
+                    const message = `Hello ${user.name},\n\nYour order #${order.id} has been cancelled.\n\nOrder Details:\n${itemsList}\n\nTotal Amount: $${order.totalAmount}\n\nThe items have been returned to stock. If you have any questions, please contact our support team.`;
+
+                    const sendEmailDto: SendEmailDto = {
+                        name: user.name,
+                        to_email: user.email,
+                        subject: `Order Cancelled - Order #${order.id}`,
+                        message
+                    };
+
+                    await this.emailapiService.sendMail(sendEmailDto);
+                }
+            } catch (emailError) {
+                console.error('Failed to send order cancellation email:', emailError);
+            }
 
             return order;
 
