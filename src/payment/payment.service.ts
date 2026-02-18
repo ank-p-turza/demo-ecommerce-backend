@@ -130,7 +130,10 @@ export class PaymentService {
         return;
     }
 
-        async handleIPN(body: IpnBodyDto) {
+    async handleIPN(body: IpnBodyDto) {
+
+        console.log(body);
+        
         const { tran_id, val_id } = body;
         
         if (!val_id) {
