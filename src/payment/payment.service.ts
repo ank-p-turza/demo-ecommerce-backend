@@ -12,7 +12,7 @@ const SSLCommerzPayment = require('sslcommerz-lts');
 
 @Injectable()
 export class PaymentService {
-    private sslcommerz: any;
+    private readonly sslcommerz: any;
     private readonly storeId: string;
     private readonly storePassword: string;
     private readonly isLive: boolean;
@@ -130,7 +130,10 @@ export class PaymentService {
         return;
     }
 
-        async handleIPN(body: IpnBodyDto) {
+    async handleIPN(body: IpnBodyDto) {
+
+        console.log(body);
+        
         const { tran_id, val_id } = body;
         
         if (!val_id) {
@@ -142,9 +145,9 @@ export class PaymentService {
         await queryRunner.startTransaction();
 
         try {
+            // Lock only the transaction row (without relations to avoid LEFT JOIN with FOR UPDATE)
             const transaction = await queryRunner.manager.findOne(Transaction, {
                 where: { transactionId: tran_id },
-                relations: ['order', 'order.user'],
                 lock: { mode: 'pessimistic_write' }
             });
 
@@ -152,6 +155,7 @@ export class PaymentService {
                 throw new NotFoundException('Transaction not found.');
             }
 
+            // If already processed, return early
             if (transaction.status === TransactionStatus.VALID) {
                 await queryRunner.rollbackTransaction();
                 await queryRunner.release();
@@ -163,18 +167,28 @@ export class PaymentService {
                 };
             }
 
-            const isValid = await this.validatePayment(body, transaction);
+            // Load the order relation separately (after locking)
+            const transactionWithRelations = await queryRunner.manager.findOne(Transaction, {
+                where: { transactionId: tran_id },
+                relations: ['order', 'order.user']
+            });
+
+            if (!transactionWithRelations?.order) {
+                throw new NotFoundException('Transaction order not found.');
+            }
+
+            const isValid = await this.validatePayment(body, transactionWithRelations);
 
             if (isValid) {
-                transaction.validationId = val_id;
-                transaction.status = TransactionStatus.VALID;
-                transaction.gatewayResponse = body;
-                transaction.paymentMethod = body.card_type || 'Unknown';
+                transactionWithRelations.validationId = val_id;
+                transactionWithRelations.status = TransactionStatus.VALID;
+                transactionWithRelations.gatewayResponse = body;
+                transactionWithRelations.paymentMethod = body.card_type || 'Unknown';
 
-                transaction.order.status = OrderStatus.PAID;
+                transactionWithRelations.order.status = OrderStatus.PAID;
 
-                await queryRunner.manager.save(Transaction, transaction);
-                await queryRunner.manager.save(Order, transaction.order);
+                await queryRunner.manager.save(Transaction, transactionWithRelations);
+                await queryRunner.manager.save(Order, transactionWithRelations.order);
 
                 await queryRunner.commitTransaction();
                 
@@ -185,7 +199,7 @@ export class PaymentService {
                 return {
                     message: 'Payment processed successfully',
                     transactionId: tran_id,
-                    orderId: transaction.order.id,
+                    orderId: transactionWithRelations.order.id,
                     status: 'success'
                 };
             } else {
